@@ -1,0 +1,315 @@
+---
+title: "cDNA_Indexing"
+author: "Natalia Andrade"
+date: "2022-12-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(stringr)
+```
+# Get NOVA_all from "Data/NOVA_lab"
+
+```{r}
+meta_lab<- read.csv("data/meta_NOVA_lab.csv") %>% 
+  
+                dplyr::select("Sample_ID","RNA_Ext_Coordinate","qPCR_Coordinate",
+                       "RNA_Original_concentration","RNA_Dilution_concentration","Cq",                         "Plate_Number","Extraction_CD")
+```
+#Creating columns with number of cycles
+
+```{r}
+NOVA_lab_cycles<- meta_lab %>% 
+  
+                  mutate(cycles_15 = if_else( grepl("13|14|15", Cq), TRUE, FALSE)) %>% 
+    
+                  mutate(cycles_18 = if_else( grepl("16|17|18", Cq), TRUE, FALSE)) %>% 
+    
+                  mutate(cycles_21 = if_else( grepl("19|20|21", Cq), TRUE, FALSE)) %>% 
+    
+                  mutate(cycles_24 = if_else( grepl("22|23|24", Cq), TRUE, FALSE)) %>%
+    
+                  mutate(cycles_27 = if_else( grepl("25|26|27", Cq), TRUE, FALSE)) %>%
+  
+                  mutate(cycles_28 = if_else( grepl("28", Cq), TRUE, FALSE)) 
+  
+```
+
+Adding indexes IDs
+```{r}
+Indexes_A1_A3<- read.csv("raw_data/Index_A1_A3.csv")
+dim(Indexes_A1_A3)
+#Only 270 samples in NOVA experiment so cut number of rows/indexes
+Indexes_NOVA<- Indexes_A1_A3[1:270,1:8]
+
+#Arrange data by Cq
+
+NOVA_lab_cycles<- NOVA_lab_cycles %>% 
+          
+                  arrange(Cq)
+#Bind columns from indexes to our database
+
+NOVA_indexes<- bind_cols(NOVA_lab_cycles, Indexes_NOVA) %>% 
+  
+              mutate(Lane_seq = 1)
+
+
+
+```
+
+
+#Creating plate maps by Grouping samples per cycles
+```{r}
+NOVA_indexes_platemaps<- NOVA_indexes %>% 
+  
+                        dplyr::select("Sample_ID","Plate_Number",
+                                      "Cq","qPCR_Coordinate",
+                                      "Row", "Col", "UDI_ID","Set","cycles_15",
+                                      "cycles_18","cycles_21",
+                                      "cycles_24","cycles_27","cycles_28") %>% 
+  
+                        arrange("UDI_ID") %>% 
+  
+                        mutate(order = 1:270) %>% 
+  
+                        mutate(Index_cord = paste(Row,Col, sep = "_"))
+
+cycles_15<- NOVA_indexes_platemaps %>% 
+  
+                filter(cycles_15 ==TRUE) %>% 
+                
+                dplyr::select("Sample_ID","Plate_Number","Cq","qPCR_Coordinate",
+                                      "Row", "Col", "UDI_ID","Set","cycles_15") #8
+
+cycles_18<- NOVA_indexes_platemaps %>% 
+  
+                filter(grepl("16|17|18", Cq)) %>% 
+                
+                dplyr::select("Sample_ID","Plate_Number",
+                                      "Cq","qPCR_Coordinate",
+                                      "Row", "Col", "UDI_ID","Set",
+                                      "cycles_18")#83
+
+cycles_21<- NOVA_indexes_platemaps %>% 
+  
+                filter(grepl("19|20|21", Cq)) %>% 
+
+                dplyr::select("Sample_ID","Plate_Number",
+                                      "Cq","qPCR_Coordinate",
+                                      "Row", "Col", "UDI_ID","Set","cycles_21")#79
+
+cycles_24<- NOVA_indexes_platemaps %>% 
+  
+                filter(grepl("22|23|24", Cq)) %>% 
+
+                dplyr::select("Sample_ID","Plate_Number",
+                                      "Cq","qPCR_Coordinate",
+                                      "Row", "Col", "UDI_ID","Set",
+                                      "cycles_24")#4
+
+cycles_27<- NOVA_indexes_platemaps %>% 
+  
+                filter(grepl("25|26|27", Cq)) %>% 
+  
+                 dplyr::select("Sample_ID","Plate_Number",
+                                      "Cq","qPCR_Coordinate",
+                                      "Row", "Col", "UDI_ID","Set","cycles_27")# 65
+
+cycles_28<- NOVA_indexes_platemaps %>% 
+  
+                filter(grepl("28", Cq)) %>% 
+
+                dplyr::select("Sample_ID","Plate_Number",
+                                      "Cq","qPCR_Coordinate",
+                                      "Row", "Col", "UDI_ID","Set","cycles_28")#4
+
+#write.csv(cycles_15,"data/cycles_15_plate_NOVA.csv")
+#write.csv(cycles_18,"data/cycles_18_plate_NOVA.csv")
+#write.csv(cycles_21,"data/cycles_21_plate_NOVA.csv")
+#write.csv(cycles_24,"data/cycles_24_plate_NOVA.csv")
+#write.csv(cycles_27,"data/cycles_27_plate_NOVA.csv")
+#write.csv(cycles_28,"data/cycles_28_plate_NOVA.csv")
+
+```
+#Get samples per indexing plate
+```{r}
+NOVA_cDNA_SetA1<- NOVA_indexes_platemaps %>% 
+  
+                  filter(Set == "UDI_Set_A1")
+
+NOVA_cDNA_SetA2<- NOVA_indexes_platemaps %>% 
+  
+                  filter(Set == "UDI_Set_A2")
+
+NOVA_cDNA_SetA3<- NOVA_indexes_platemaps %>% 
+  
+                  filter(Set == "UDI_Set_A3")
+
+#write.csv(NOVA_cDNA_SetA1, "data/NOVA_cDNA_SetA1.csv")
+#write.csv(NOVA_cDNA_SetA2, "data/NOVA_cDNA_SetA2.csv")
+#write.csv(NOVA_cDNA_SetA3, "data/NOVA_cDNA_SetA3.csv")
+
+```
+#List of RNA coordinates of sample to redo
+```{r}
+NOVA_cDNA_SetA3_cDNA_redo_12<- NOVA_indexes %>% 
+  
+                  filter(Set == "UDI_Set_A3") %>% 
+  
+                  filter(!grepl("\\d", Cq)) %>% 
+
+                dplyr::select("Sample_ID","Plate_Number",
+                              "RNA_Ext_Coordinate","qPCR_Coordinate",
+                              "RNA_Original_concentration",
+                              "Row", "Col", "UDI_ID","Set")#27
+
+#write.csv(NOVA_cDNA_SetA3_cDNA_redo_12, "data/list_forcDNA_12_Redos_NOVA.csv")
+```
+
+
+# Adding informtion of redos and 12 left
+
+```{r}
+qPCR_Plate_8<- read.csv("raw_data/Plate8_qPCR_platemap.csv")  %>% 
+  
+                      filter(Project == 'NOVA') %>% 
+  
+                      dplyr::select("Sample_ID","Well_Position", "Cq","qPCR_plate"  )
+```
+
+
+#Find Cq distribution plate 8 
+```{r}
+#meta_lab$Cq<- as.integer(meta_lab$Cq)
+
+Cq_8<- qPCR_Plate_8 %>% 
+          
+          filter(grepl("\\d", Cq)) %>% 
+  
+          arrange(desc(Cq))
+
+Cq_8$Cq<- as.integer(Cq_8$Cq)
+         
+Cq_8_max<- max(Cq_8$Cq)#27
+
+Cq_8_min<- min(Cq_8$Cq) #12
+#here plot to see categories
+```
+PLOT
+
+```{r}
+data_plot_Cq_8 <- Cq_8
+
+plot_Cq_8 <- ggplot(data_plot_Cq_8, aes(Cq)) + 
+  geom_bar(aes(), position = "dodge") +
+  scale_x_continuous(breaks = 0 : 40, guide = guide_axis(check.overlap = TRUE))
+
+print(plot_Cq_8)
+```
+
+#Creating cycles column
+
+```{r}
+
+
+cycles_21<- qPCR_Plate_8 %>% 
+  
+                filter(grepl("19|20|21", Cq)) %>% 
+  
+                 mutate(cycles = 21) #18
+
+
+cycles_23<- qPCR_Plate_8 %>% 
+  
+                filter(grepl("22|23", Cq)) %>% 
+  
+                mutate(cycles = 23 )#10
+
+          
+  
+ 
+```
+
+
+```{r}
+qPCR_Plate_8_cycles<- bind_rows(cycles_21,
+                                cycles_23) 
+```
+
+Adding information to data base with indexes
+```{r}
+names(NOVA_indexes_platemaps)
+
+No_cycles_samples<- NOVA_indexes_platemaps %>% 
+  
+  
+                    filter(!grepl("\\d", Cq)) %>% 
+  
+                    dplyr::select(-"Cq")
+
+Samples_new_cycles<- left_join(qPCR_Plate_8_cycles, No_cycles_samples, by="Sample_ID")
+
+```
+
+NEW INDEX order for plate_Set_A3
+```{r}
+Samples_plate_NOVA_Set_A3<- Samples_new_cycles %>% 
+  
+                          filter(Set == "UDI_Set_A3")
+
+Indexes_NOVA_Set_A3<- Samples_plate_NOVA_Set_A3 %>% 
+  
+                      dplyr:: select("UDI_ID", "Set", "Index_cord") %>% 
+  
+                      arrange(UDI_ID)
+
+Samples_plate_NOVA_Set_A3_cycle<- Samples_plate_NOVA_Set_A3 %>% 
+  
+                               dplyr:: select("Sample_ID","qPCR_plate","Well_Position",
+                                                "cycles") %>% 
+                               arrange(cycles) %>% 
+         
+                               dplyr::rename('qPCR_Coordinate' =  'Well_Position', 
+                               "Plate_Number" = "qPCR_plate" )
+  
+
+Samples_new_cycles_NOVA_Set_A3<- cbind(Samples_plate_NOVA_Set_A3_cycle, Indexes_NOVA_Set_A3) 
+
+Samples_new_cycles_NOVA_Set_A3<- Samples_new_cycles_NOVA_Set_A3 %>% 
+     
+                             dplyr:: select("Sample_ID", "Plate_Number", "qPCR_Coordinate", 
+                                     "Index_cord", "UDI_ID","Set","cycles" )
+
+write.csv(Samples_new_cycles_NOVA_Set_A3, "data/FOR_Plating_NOVA_Set_A3_new.csv")
+
+
+####################################### New plate NOVA_cDNA_SetA3 ##################################
+
+#First cut the section of the old table with cycles = 0
+dim(NOVA_cDNA_SetA3)
+names(NOVA_cDNA_SetA3)
+names(Samples_new_cycles_NOVA_Set_A3)
+#matching_column names
+NOVA_cDNA_SetA3_new<- NOVA_cDNA_SetA3 %>% 
+  
+  dplyr::rename("cycles"= 'Cq') %>% 
+  
+  dplyr::select("Sample_ID","Plate_Number","qPCR_Coordinate","Index_cord","UDI_ID", "Set","cycles")       
+
+
+NOVA_cDNA_SetA3_cut<- NOVA_cDNA_SetA3_new[1:51,]
+
+#Bind samples with new assinged indexes
+
+NOVA_cDNA_SetA3_new<- rbind(Samples_new_cycles_NOVA_Set_A3, NOVA_cDNA_SetA3_cut)
+
+#### !!!! !!! IMPORTANT !! ### Fix cycle column!!
+```
+  

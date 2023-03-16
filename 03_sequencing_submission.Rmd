@@ -1,0 +1,123 @@
+---
+title: "03_sequencing_submission"
+author: "Natalia Andrade"
+date: "2022-12-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(stringr)
+```
+
+```{r}
+Indexes_A1_A4 <- read.csv("raw_data/Index_A1_A4.csv") %>% 
+  
+                dplyr::rename(i7_index_sequence = i7_sequence, i5_index_sequence = i5_sequence ) %>% 
+  
+                mutate(Plate_well = paste(Row, Col, sep = "")) %>% 
+  
+                dplyr::select(UDI_ID, i7_index_sequence, i5_index_sequence, Set, Plate_well)
+```
+
+
+Lane 1 Set A1 - Plate 1
+```{r}
+NOVA_Lane1_Set_A1<- read.csv("data/NOVA_cDNA_SetA1.csv") %>% 
+  
+                    dplyr::select(- X) %>% 
+  
+                    dplyr::select('Sample_ID', 'UDI_ID') %>% 
+  
+                    mutate(Library_Kit_Type = 'QuantSeq 3’mRNA-Seq Library Prep Kit FWD with UDI 12 nt') %>% 
+
+                    mutate(Lane = "lane_1") %>% 
+                      
+                    mutate(Plate_ID = "Lane1_Set_A1") %>% 
+                      
+                    mutate(Plate_number = "plate_1")
+
+
+NOVA_Lane1_Set_A1<- left_join(NOVA_Lane1_Set_A1, Indexes_A1_A4, by="UDI_ID") %>% 
+  
+                    dplyr::select(Sample_ID, Library_Kit_Type, i7_index_sequence,
+                                  i5_index_sequence, UDI_ID, Set,
+                                  Plate_ID, Plate_number, Plate_well,Lane)  %>% 
+          
+                    arrange(UDI_ID)
+
+
+```
+
+Lane 1 Set A2 - Plate 2
+```{r}
+NOVA_Lane1_Set_A2<- read.csv("data/NOVA_cDNA_SetA2.csv") %>% 
+  
+                    dplyr::select(- X) %>% 
+  
+                    dplyr::select('Sample_ID', 'UDI_ID') %>% 
+  
+                    mutate(Library_Kit_Type = 'QuantSeq 3’mRNA-Seq Library Prep Kit FWD with UDI 12 nt') %>% 
+
+                    mutate(Lane = "lane_1") %>% 
+                      
+                    mutate(Plate_ID = "Lane1_Set_A2") %>% 
+                      
+                    mutate(Plate_number = "plate_2")
+
+
+NOVA_Lane1_Set_A2<- left_join(NOVA_Lane1_Set_A2, Indexes_A1_A4, by="UDI_ID") %>% 
+  
+                    dplyr::select(Sample_ID, Library_Kit_Type, i7_index_sequence,
+                                  i5_index_sequence, UDI_ID, Set,
+                                  Plate_ID, Plate_number, Plate_well,Lane)  %>% 
+          
+                    arrange(UDI_ID)
+
+
+```
+Lane 1 Set A3 - Plate 3
+```{r}
+NOVA_Lane1_Set_A3<- read.csv("data/NOVA_cDNA_SetA3_edit.csv") %>% 
+  
+                    dplyr::select(- X) %>% 
+  
+                    dplyr::select('Sample_ID', 'UDI_ID') %>% 
+  
+                    mutate(Library_Kit_Type = 'QuantSeq 3’mRNA-Seq Library Prep Kit FWD with UDI 12 nt') %>% 
+
+                    mutate(Lane = "lane_1") %>% 
+                      
+                    mutate(Plate_ID = "Lane1_Set_A3") %>% 
+                      
+                    mutate(Plate_number = "plate_3")
+
+
+NOVA_Lane1_Set_A3<- left_join(NOVA_Lane1_Set_A3, Indexes_A1_A4, by="UDI_ID") %>% 
+  
+                    dplyr::select(Sample_ID, Library_Kit_Type, i7_index_sequence,
+                                  i5_index_sequence, UDI_ID, Set,
+                                  Plate_ID, Plate_number, Plate_well,Lane)  %>% 
+          
+                    arrange(UDI_ID)
+
+
+```
+
+Fuse all NOVA
+```{r}
+NOVA<- rbind(NOVA_Lane1_Set_A1, NOVA_Lane1_Set_A2,NOVA_Lane1_Set_A3)
+```
+
+Writing file
+
+```{r}
+#write.csv(NOVA, "data/NOVA.csv")
+```
+

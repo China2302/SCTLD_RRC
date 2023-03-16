@@ -1,0 +1,76 @@
+---
+title: "NOVA_Lab_Exp"
+author: "Natalia Andrade"
+date: "2022-12-09"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(reshape2)
+```
+#Bind lab data of each time point together
+```{r}
+TP1<- read.csv("raw_data/TP1_data.csv")
+TP1$RNA_Original_concentration<- as.integer(TP1$RNA_Original_concentration)
+TP1$Cq<- as.character(TP1$Cq)
+
+TP2<- read.csv("raw_data/TP2_data.csv")
+TP2$Cq<- as.character(TP2$Cq)
+
+TP3<- read.csv("raw_data/TP3_data.csv")
+TP3$Cq<- as.character(TP3$Cq)
+
+# 12 samples that were extracted by David and Lys but we lost them and they will be extracted in Plate 8
+TP1_12<- read.csv("raw_data/TP1_12_data.csv")
+
+names(TP1)
+names(TP2)
+names(TP3)
+
+
+NOVA_lab<- bind_rows(TP1, TP2, TP3) 
+
+#write.csv(NOVA_lab, "raw_data/NOVA_lab.csv")
+```
+
+# Selecting samples to redo cDNA library and RNA extraction
+```{r}
+cDNA_redos<- NOVA_lab %>% 
+  
+            filter(Cq == "Undetermined")#14 samples plus 12 that were not extracted yet 
+
+#write.csv(cDNA_redos, "data/cDNA_redos_NOVA.csv")
+
+RNA_redos<- NOVA_lab %>% 
+  
+            filter(is.na(RNA_Original_concentration)) #1 being extracted with MOTE redos
+```
+
+##### ### Integrating Metadata and Lab data ###
+```{r}
+meta_NOVA<- read.csv("raw_data/NOVA_meta_T3Updates.csv")
+
+names(meta_NOVA)
+
+meta_NOVA_lab<- meta_NOVA %>% 
+  
+                mutate(Sample_ID = paste(Falcon_Tube, ID,sep = "_")) %>% 
+                
+              full_join(NOVA_lab, by="Sample_ID")
+
+#12 samples left to add
+TP1_12<- meta_NOVA_lab %>% filter(is.na(RNA_Ext_Coordinate))
+
+#write.csv(meta_NOVA_lab,"data/meta_NOVA_lab.csv")
+```
+

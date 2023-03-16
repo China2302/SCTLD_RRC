@@ -1,0 +1,17 @@
+---
+title: "05_read_counts"
+author: "Natalia Andrade Rodriguez"
+date: "2023-03-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Mergin read count per sample obtained with STAR 
+
+```{r}
+
+```
+
