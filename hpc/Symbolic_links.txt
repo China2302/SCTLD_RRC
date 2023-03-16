@@ -1,0 +1,16 @@
+# Symbolic links
+
+/scratch/projects/c_transcriptomics/NOVA_SCTLD/raw_data
+
+ln -s /scratch/projects/c_transcriptomics/NOVA_SCTLD/data/trimmed_l35 trimmed_l35
+
+ln -s /scratch/projects/c_transcriptomics/NOVA_SCTLD/data/trimmed/trimmed_data/ forStar
+
+ln -s /scratch/projects/c_transcriptomics/NOVA_SCTLD/data/trimmed_polyA/trimmed_polyA_data/  forStar_polyA
+
+ln -s /scratch/projects/c_transcriptomics/NOVA_SCTLD/data/trimmed_l35/trimmed_l35_data/ forStar_l35_poly
+
+
+ln-s /scratch/projects/c_transcriptomics/NOVA_SCTLD/raw_data
+
+
