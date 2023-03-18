@@ -1,0 +1,71 @@
+---
+title: "06_gene_expression_analysis"
+author: "Natalia Andrade Rodriguez"
+date: "2023-03-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Gene expression analysis
+
+###Library installing/loading
+```{r}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("DESeq2")
+library(DESeq2)
+```
+
+```{r}
+sample_data<- samples_selected_4M 
+
+sample_data<- sample_data %>% select(Sample_ID,ID, Sample_Period, Resistance, Location,treat_type)
+
+all(colnames(countData)) %in% rownames(sample_data)
+
+colnames_countData<- as.data.frame(colnames(countData)) %>% rename('colnames'='colnames(countData)') %>% mutate(order = 1:146)
+sample_data<- sample_data %>% mutate(colnames = Sample_ID)
+
+sample_data<- sample_data %>% full_join(colnames_countData, by = 'colnames')
+sample_data<- sample_data %>% arrange(order) 
+row.names(sample_data)<- sample_data$Sample_ID
+  
+test<- sample_data %>% full_join(colnames_countData, by = 'colnames')
+
+colnames(countData) == rownames(sample_data)
+```
+
+
+```{r}
+dds = DESeqDataSetFromMatrix(countData = countData, 
+colData = sample_data, design = ~ ID)
+```
+
+```{r}
+dds<- DESeq(dds)
+```
+
+```{r}
+vsd = vst(dds)
+```
+
+```{r}
+pcaData = plotPCA(vsd, intgroup=c('Sample_ID',"Sample_Period", "Location","ID"), 
+returnData=TRUE)
+percentVar = round(100 * attr(pcaData, "percentVar"))
+
+#png("DGE_PCA-vst.STAR.png", width=7, height=7, units = "in", res = 300)
+ggplot(pcaData, aes(PC1, PC2, colour = ID)) + 
+geom_point(size = 2) + theme_bw() + 
+geom_text_repel(aes(label = Sample_ID), nudge_x = -1, nudge_y = 0.2, size = 3) +
+ggtitle("Principal Component Analysis (PCA)", subtitle = "vst transformation") +
+xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+ylab(paste0("PC2: ",percentVar[2],"% variance"))
+#dev.off()
+
+```
+
