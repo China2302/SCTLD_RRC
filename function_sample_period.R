@@ -9,7 +9,7 @@ function_sample_period<- function(Exp) {
   
   for(i in 1:length(geno)) {
     
-    geno_select<- dcast(Exp, ID + Resistance ~ Sample_Period , value.var = 'uniqsample', fun.aggregate = sum) %>% 
+    geno_select<- dcast(Exp, ID + Resistance_April2021 ~ Sample_Period , value.var = 'uniqsample', fun.aggregate = sum) %>% 
       
       rename(SP1= '1', SP2="2", SP3="3") %>% 
       
@@ -42,11 +42,11 @@ function_sample_period<- function(Exp) {
     
     temp_data<- rbind(temp_data, geno_all) 
     
-    Pairs_sample_period<- dcast(Exp,Resistance + ID ~ Sample_ID) %>% 
+    Pairs_sample_period<- dcast(Exp,Resistance_April2021 + ID ~ Sample_ID) %>% 
       
       left_join(temp_data, by="ID") 
   }
   return(Pairs_sample_period)
 }
 
-#write_rds(function_sample_period,'function_sample_period.rds')
+write_rds(function_sample_period,'function_sample_period.rds')

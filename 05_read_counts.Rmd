@@ -27,40 +27,53 @@ library(tidyverse)
 ```{r}
 reads_mapped<- read.delim("data/STAR_multiqc_general_stats.txt", sep = "\t")
 head(reads_mapped)
+```
 
-reads_mapped<- reads_mapped %>% rename(percent_uniq = STAR_mqc.generalstats.star.uniquely_mapped_percent) %>% rename(million_uniq = STAR_mqc.generalstats.star.uniquely_mapped) %>% rename(Sample_ID = Sample)
+```{r}
+reads_mapped<- reads_mapped %>% 
+           
+               rename(percent_uniq = STAR_mqc.generalstats.star.uniquely_mapped_percent) %>%
+  
+               rename(million_uniq = STAR_mqc.generalstats.star.uniquely_mapped) %>% 
+  
+               rename(Sample_ID = Sample)
 
 samples_selected_4M<- reads_mapped %>% filter(million_uniq > 4000000)
 
-for_list_samples_4M<- samples_selected_4M %>% select(Sample_ID)
-#write_delim(for_list_samples_4M, 'hpc/data/sample_list_sp2_3.txt')
-
 samples_selected_5M<- reads_mapped %>% filter(million_uniq > 5000000)
+```
+
+```{r}
+sample_metadata<- read.csv("data/meta_NOVA_lab.csv") 
+
+names(sample_metadata)
+```
+
+```{r}
+sample_metadata_reads<- sample_metadata %>% left_join(samples_selected_4M, by="Sample_ID")
 
 ```
 
 ```{r}
-sample_data<- read.csv("data/sample_data_draft.csv") #%>% dplyr::select(Sample_ID, Resistance, Sample_Period)
-names(sample_data)
 
-```
-
-```{r}
-samples_all<- sample_data %>% left_join(samples_selected_4M, by="Sample_ID")
-
-
-samples_selected_4M<- samples_all %>% filter(!is.na(million_uniq))   #146 samples corresponding to 81 colonies
-
-samples_selected_4M<- samples_selected_4M %>% 
+samples_selected_4M<- sample_metadata_reads %>% 
+  
+                      filter(!is.na(million_uniq))  %>% 
+  
+                      filter(Species != 'Ofra') %>% 
   
                       mutate(SP1 = case_when(Sample_Period == '1' ~ TRUE)) %>% 
   
                       mutate(SP2 = case_when(Sample_Period == '2' ~ TRUE)) %>% 
   
-                      mutate(SP3 = case_when(Sample_Period == '3' ~ TRUE)) 
+                      mutate(SP3 = case_when(Sample_Period == '3' ~ TRUE)) %>% 
+  
+                      mutate(uniqsample = 1)
   
 samples_selected_4M$Sample_Period<- as.character(samples_selected_4M$Sample_Period)
+samples_selected_4M$RNA_Dilution_concentration<- as.character(samples_selected_4M$RNA_Dilution_concentration)
 
+n_colonies_4M<- unique(samples_selected_4M$ID) #79
 ```
 
 #Creating variables based on colony ID and sample period 
@@ -70,11 +83,12 @@ SP2_SP3: samples of colonies from which we have data from sample period 2 and 3 
 SP1_SP2_SP3: samples of colonines from which we have data from the 3 samples periods 
 
 ```{r}
+function_sample_period<- readRDS('function_sample_period.rds')
 sample_period_data_cast<- function_sample_period(samples_selected_4M)
 
 sample_period_data <- melt(sample_period_data_cast, 
                   
-                  id=c("Resistance", "ID", 'SP1_SP2','SP1_SP3','SP2_SP3', 'SP1_SP2_SP3'), 
+                  id=c("Resistance_April2021", "ID", 'SP1_SP2','SP1_SP3','SP2_SP3', 'SP1_SP2_SP3'), 
                   
                   variable_name = "Sample_ID") %>% 
  
@@ -82,9 +96,175 @@ sample_period_data <- melt(sample_period_data_cast,
   
                   rename(Sample_ID = variable) %>% 
   
-                  dplyr::select(- Resistance, - ID, -value)
+                  dplyr::select(- Resistance_April2021, - ID, -value)
      
+```
 
+
+#Select colonies from which we have samples for the different sample periods
+
+```{r}
+#Data set with samples of colonies from which we have data for samples period 1, 2 and 3
+
+all_sp<- sample_period_data %>%
+  
+         filter(SP1_SP2_SP3 == 1) %>% 
+  
+         select(Sample_ID, SP1_SP2_SP3) 
+
+sp1_sp2_sp3<- all_sp %>%                                          #27 samples / 9 colonies
+            
+              left_join(samples_selected_4M, by ="Sample_ID")
+
+n_colonies_sp_all<- unique(sp1_sp2_sp3$ID)
+```
+
+```{r}
+#Data set with samples of colonies from which we have data for samples period 1 and 2
+
+sp1_sp2<- sample_period_data %>%                                 #22 samples / 11 colonies
+   
+          filter(SP1_SP2 == 1) %>% 
+  
+          select(Sample_ID, SP1_SP2 ) %>%
+  
+          bind_rows(all_sp) %>%
+  
+          left_join(samples_selected_4M, by ="Sample_ID") %>% 
+  
+          filter(Sample_Period != '3')
+
+n_colonies_sp1_2<- unique(sp1_sp2$ID)
+```
+
+```{r}
+#Data set with samples of colonies from which we have data for samples period 1 and 3
+
+sp1_sp3<- sample_period_data %>%                                #22 samples / 11 colonies
+   
+          filter(SP1_SP3 == 1) %>% 
+  
+          select(Sample_ID, SP1_SP3 ) %>%
+  
+          bind_rows(all_sp) %>%
+  
+          left_join(samples_selected_4M, by ="Sample_ID") %>% 
+  
+          filter(Sample_Period != '2')
+
+n_colonies_sp1_3<- unique(sp1_sp3$ID)
+```
+
+```{r}
+#Data set with samples of colonies from which we have data for samples period 2 and 3
+
+sp2_sp3<- sample_period_data %>%                             #104 samples / 52 unique colonies
+   
+          filter(SP2_SP3 == 1) %>% 
+  
+          select(Sample_ID, SP2_SP3 ) %>%
+  
+          bind_rows(all_sp) %>%
+  
+          left_join(samples_selected_4M, by ="Sample_ID") %>% 
+  
+          filter(Sample_Period != '1')
+
+n_colonies_sp2_3<- unique(sp2_sp3$ID)
+```
+
+#List will be use to select files for the countData_4M and countData_sp2_3
+```{r}
+#for the countData_4M
+for_list_samples_4M<- samples_selected_4M  %>% select(Sample_ID)
+#write_delim(for_list_samples_4M, 'hpc/data/sample_list_4M.txt')
+
+#for the countData_sp2_3
+
+for_list_sp2_sp3<- sp2_sp3 %>% select(Sample_ID)
+
+write_delim(for_list_sp2_sp3, 'hpc/data/sample_list_sp2_3.txt')
+
+```
+
+#Creating a list of all files from samples that have atleast 4M reads mapped
+```{r}
+dir<- "/Volumes/LaCie_NAR/Cnidarian_Immunity_lab/NOVA_SCTLD/data/star_trimmed_reads/"
+```
+
+
+```{r}
+file_4M<- list.files(paste0(dir,"samples_4M_reads" ),
+                  "*.gzReadsPerGene.out.tab$", full.names = T)
+
+```
+
+```{r}
+countData_4M = data.frame(fread(file_4M[1]))[c(1,3)]
+
+for(i in 2:length(file_4M)) {
+        countData_4M = cbind(countData_4M, data.frame(fread(file_4M[i]))[3])
+}
+```
+
+```{r}
+# Skip first 4 lines, count data starts on the 5th line
+countData_4M = countData_4M[c(5:nrow(countData_4M)),]
+colnames(countData_4M) = c("GeneID", gsub(paste0(dir,"samples_4M_reads/"), "", file_4M))
+colnames(countData_4M) = gsub("_trimmed.fq.gzReadsPerGene.out.tab", "", colnames(countData_4M))
+rownames(countData_4M) = countData_4M$GeneID
+
+countData_4M = countData_4M[,c(2:ncol(countData_4M))]
+```
+
+#Creating a list of all files of samples from the same colonies at samples period 2 and 3
+```{r}
+file_sp2_3<- list.files(paste0(dir,"samples_sp2_3_reads" ),
+                  "*.gzReadsPerGene.out.tab$", full.names = T)
+```
+
+```{r}
+countData_sp2_3 = data.frame(fread(file_sp2_3[1]))[c(1,3)]
+
+for(i in 2:length(file_sp2_3)) {
+        countData_sp2_3 = cbind(countData_sp2_3, data.frame(fread(file_sp2_3[i]))[3])
+}
+```
+
+```{r}
+# Skip first 4 lines, count data starts on the 5th line
+countData_sp2_3 = countData_sp2_3[c(5:nrow(countData_sp2_3)),]
+colnames(countData_sp2_3) = c("GeneID", gsub(paste0(dir,"samples_sp2_3_reads/"), "", file_sp2_3))
+colnames(countData_sp2_3) = gsub("_trimmed.fq.gzReadsPerGene.out.tab", "", colnames(countData_sp2_3))
+rownames(countData_sp2_3) = countData_sp2_3$GeneID
+
+countData_sp2_3 = countData_sp2_3[,c(2:ncol(countData_sp2_3))]
+```
+
+
+#Plotting read counts 
+```{r}
+ggplot(samples_selected_4M, aes(million_uniq)) + geom_histogram()
+```
+
+```{r}
+ggplot(samples_selected_4M, aes(Cq)) + geom_histogram()
+
+```
+
+```{r}
+ggplot(samples_selected_4M, aes(Resistance2_April2021)) + geom_bar() + facet_grid(  ~ Sample_Period)
+
+ggplot(samples_selected_4M, aes(Sample_Period)) + geom_bar(aes(fill=Sample_Period), position = "dodge") + facet_wrap(~ ID )
+
+ggplot(samples_selected_4M, aes(Resistance2_April2021)) + geom_bar(aes(fill=Sample_Period), position = "dodge") + facet_wrap(~ ID )
+
+forplot<- samples_selected_4M %>% group_by(Sample_Period, Resistance2_April2021)
+
+ggplot(samples_selected_4M, aes(Resistance2_April2021)) + geom_bar(aes(fill=Sample_Period), position = "dodge") + facet_wrap(~ ID )
+
+ggplot(samples_selected_4M, aes(Sample_Period)) + geom_bar(aes(fill=Resistance2_April2021), position = "dodge") + facet_wrap(ID ~ . )
+                                               
 ```
 
 #Visualising samples that can be analysed together based on sample periode
@@ -112,130 +292,8 @@ ggplot(sample_period_plot, aes(SP_data)) +
 
 ggplot(sample_period_plot_cast, aes(SP_data)) +
    
-      geom_bar() 
+      geom_bar(aes(color=Resistance_April2021)) 
       
  #    + geom_text(aes(label = after_stat()), vjust = 0)
 
 ```
-
-#Select colonies from which we have samples for the different sample periods
-
-```{r}
-#Data set with samples of colonies from which we have data for samples period 1, 2 and 3
-
-all_sp<- sample_period_data %>%
-  
-         filter(SP1_SP2_SP3 == 1) %>% 
-  
-         select(Sample_ID, SP1_SP2_SP3) 
-
-sp1_sp2_sp3<- all_sp %>%                                          #27 samples / 9 colonies
-            
-              left_join(samples_selected_4M, by ="Sample_ID")
-
-n_colonies_sp_all<- unique(sp1_sp2_sp3$ID)
-
-#Data set with samples of colonies from which we have data for samples period 1 and 2
-
-sp1_sp2<- sample_period_data %>%                                 #22 samples / 11 colonies
-   
-          filter(SP1_SP2 == 1) %>% 
-  
-          select(Sample_ID, SP1_SP2 ) %>%
-  
-          bind_rows(all_sp) %>%
-  
-          left_join(samples_selected_4M, by ="Sample_ID") %>% 
-  
-          filter(Sample_Period != '3')
-
-n_colonies_sp1_2<- unique(sp1_sp2$ID)
-
-
-#Data set with samples of colonies from which we have data for samples period 1 and 3
-
-sp1_sp3<- sample_period_data %>%                                #22 samples / 11 colonies
-   
-          filter(SP1_SP3 == 1) %>% 
-  
-          select(Sample_ID, SP1_SP3 ) %>%
-  
-          bind_rows(all_sp) %>%
-  
-          left_join(samples_selected_4M, by ="Sample_ID") %>% 
-  
-          filter(Sample_Period != '2')
-
-n_colonies_sp1_3<- unique(sp1_sp3$ID)
-
-  
-#Data set with samples of colonies from which we have data for samples period 2 and 3
-
-sp2_sp3<- sample_period_data %>%                             #104 samples / 52 unique colonies
-   
-          filter(SP2_SP3 == 1) %>% 
-  
-          select(Sample_ID, SP2_SP3 ) %>%
-  
-          bind_rows(all_sp) %>%
-  
-          left_join(samples_selected_4M, by ="Sample_ID") %>% 
-  
-          filter(Sample_Period != '1')
-
-n_colonies_sp2_3<- unique(sp2_sp3$ID)
-
-for_list_sp2_sp3<- sp2_sp3 %>% select(ID, Sample_ID)
-
-write_delim(for_list_sp2_sp3, 'hpc/data/sample_list_sp2_3.txt')
-```
-
-```{r}
-ggplot(samples_selected_4M, aes(million_uniq)) + geom_histogram()
-
-#ggplot(samples_selected_4M, aes(Cq)) + geom_histogram()
-
-```
-
-
-```{r}
-ggplot(samples_selected_4M, aes(Resistance)) + geom_bar() + facet_grid(  ~ Sample_Period)
-
-ggplot(samples_selected_4M, aes(Sample_Period)) + geom_bar(aes(fill=Sample_Period), position = "dodge") + facet_wrap(~ ID )
-
-ggplot(samples_selected_4M, aes(Resistance)) + geom_bar(aes(fill=Sample_Period), position = "dodge") + facet_wrap(~ ID )
-
-forplot<- samples_selected_4M %>% group_by(Sample_Period, Resistance)
-
-ggplot(samples_selected_4M, aes(Resistance)) + geom_bar(aes(fill=Sample_Period), position = "dodge") + facet_wrap(~ ID )
-
-ggplot(samples_selected_4M, aes(Sample_Period)) + geom_bar(aes(fill=Resistance), position = "dodge") + facet_wrap(ID ~ . )
-                                               
-```
-
-#Creating a list of all files 
-```{r}
-dir<- "/Volumes/LaCie_NAR/Cnidarian_Immunity_lab/NOVA_SCTLD/data/star_trimmed_reads/"
-file<- list.files(paste0(dir,"samples_4M_reads" ),
-                  "*.gzReadsPerGene.out.tab$", full.names = T)
-
-```
-
-```{r}
-countData = data.frame(fread(file[1]))[c(1,3)]
-
-for(i in 2:length(file)) {
-        countData = cbind(countData, data.frame(fread(file[i]))[3])
-}
-```
-
-```{r}
-# Skip first 4 lines, count data starts on the 5th line
-countData = countData[c(5:nrow(countData)),]
-colnames(countData) = c("GeneID", gsub(paste0(dir,"samples_4M_reads/"), "", file))
-colnames(countData) = gsub("_trimmed.fq.gzReadsPerGene.out.tab", "", colnames(countData))
-rownames(countData) = countData$GeneID
-
-countData = countData[,c(2:ncol(countData))]
-```
-

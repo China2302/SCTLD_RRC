@@ -118,6 +118,6 @@ NOVA<- rbind(NOVA_Lane1_Set_A1, NOVA_Lane1_Set_A2,NOVA_Lane1_Set_A3)
 Writing file
 
 ```{r}
-#write.csv(NOVA, "data/NOVA.csv")
+#write.csv(NOVA, "data/NOVA_forsequencing.csv")
 ```
 

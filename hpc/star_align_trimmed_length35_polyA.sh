@@ -1,5 +1,5 @@
 #!/bin/bash
-#BSUB -J star_align__l35_polyA
+#BSUB -J star_align_l35_polyA
 #BSUB -q bigmem
 #BSUB -P c_transcriptomics
 #BSUB -n 16
@@ -10,9 +10,6 @@
 #BSUB -u nxa945@miami.edu
 #BSUB -N
 
-# Data used for this allignment was trimmed with "timming.sh" parameters. 
-# Notice that the sequences still have a lot of polyA and adapter contamination
-# a soft cliping option is added to STAR to deal with it.
 
 todata="/scratch/projects/c_transcriptomics/"
 
@@ -50,4 +47,5 @@ STAR \
 done
 
 multiqc ${todata}/NOVA_SCTLD/data/alligned_l35_polyA/ \
+--interactive \
 --outdir ${todata}/NOVA_SCTLD/data/alligned_l35_polyA/
