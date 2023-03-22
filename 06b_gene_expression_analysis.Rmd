@@ -1,5 +1,5 @@
 ---
-title: "06a_gene_expression_analysis- 4M mapped reads"
+title: "06a_gene_expression_analysis- dds7e: ~ Both_Resistance + Sample_Period + Species collaps Sample_period"
 author: "Natalia Andrade Rodriguez"
 date: "2023-03-16"
 output: html_document
