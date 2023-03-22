@@ -1,0 +1,502 @@
+---
+title: "06a_gene_expression_analysis- Testing models"
+author: "Natalia Andrade Rodriguez"
+date: "2023-03-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Gene expression analysis for all samples with at least 4M of mapped reads
+
+###Library installing/loading
+```{r}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("DESeq2")
+library(DESeq2)
+library(ggplot2)
+library(ggrepel)
+library(dplyr)
+library(tidyr)
+library(reshape2)
+library(tidyverse)
+```
+
+```{r}
+
+countData_4M<- readRDS("data/countData_4M.rds")
+
+colnames_countData_4M<- as.data.frame(colnames(countData_4M)) %>% rename('colnames'='colnames(countData_4M)') %>% mutate(order = 1:144)
+```
+
+```{r}
+samples_selected_4M<- read.csv("data/samples_selected_4M.csv")
+
+sample_data_4M<- samples_selected_4M %>% 
+  
+              mutate(colnames = Sample_ID) %>% 
+  
+              full_join(colnames_countData_4M, by = 'colnames') %>% 
+   
+              mutate(SP_Resistance2 = paste(Sample_Period,Resistance2_April2021, sep="_" )) %>%
+  
+              mutate(SP_Resistance = paste(Sample_Period,Resistance_April2021, sep="_" )) %>%
+  
+              mutate(Both_Resistance = paste(Resistance2_April2021,Resistance_April2021, sep="_" )) %>% 
+  
+              mutate(SP_Both_Resistance = paste(Both_Resistance,Sample_Period, sep="_" )) %>% 
+  
+              arrange(order)
+  
+              #select(Sample_ID,ID, Species, Sample_Period, Resistance2_April2021, Resistance_April2021,
+                   # Location,treat_type, Region, RNA_Dilution_concentration, Sample_name, Cq) 
+sample_data_4M$ID<- as.factor(sample_data_4M$ID)  
+row.names(sample_data_4M)<- sample_data_4M$Sample_ID
+sample_data_4M$Sample_Period<- as.factor(sample_data_4M$Sample_Period)  
+
+
+
+keep <-countData_4M %>% mutate(keep = rowSums(countData_4M) >= 130)
+
+countData_4M<- keep %>% filter(keep == TRUE) %>% select(-keep)
+
+colnames(countData_4M) == rownames(sample_data_4M)
+```
+
+## dds1--> model design : ~ Resistance_April2021 + Sample_Period
+```{r}
+dds1 = DESeqDataSetFromMatrix(countData = countData_4M, 
+                            
+                                colData = sample_data_4M, 
+ 
+                                design = ~ Resistance_April2021 + Sample_Period)
+```
+
+## dds2--> model design : ~ Resistance2_April2021 + Sample_Period
+```{r}
+dds2 = DESeqDataSetFromMatrix(countData = countData_4M, 
+                            
+                                colData = sample_data_4M, 
+ 
+                                design = ~ Resistance2_April2021 + Sample_Period)
+```
+
+## dds3--> model design : ~ Both_Resistance + Sample_Period
+```{r}
+dds3 = DESeqDataSetFromMatrix(countData = countData_4M, 
+                            
+                                colData = sample_data_4M, 
+ 
+                                design = ~ Both_Resistance + Sample_Period)
+```
+
+## dds4--> model design : ~ dds3 after having collaps Sample period as replicates of each ID
+```{r}
+dds4<- collapseReplicates(dds3, dds3$ID, dds3$Sample_Period)
+colData(dds4)
+colnames(dds4)
+matchFirstLevel <- dds3$ID == levels(dds3$ID)[1]
+```
+
+```{r}
+stopifnot(all(rowSums(counts(dds3[,matchFirstLevel])) == counts(dds4[,1])))
+```
+
+## dds5--> model design :  ~ Both_Resistance + Sample_Period + Species
+```{r}
+dds5 = DESeqDataSetFromMatrix(countData = countData_4M, 
+                            
+                                colData = sample_data_4M, 
+ 
+                                design = ~ Both_Resistance + Sample_Period + Species)
+```
+
+## dds6--> model design :  ~ Both_Resistance + Sample_Period + Species but filtering genes with low expression
+```{r}
+dds6 = DESeqDataSetFromMatrix(countData = countData_4M, 
+                            
+                                colData = sample_data_4M, 
+ 
+                                design = ~ Both_Resistance + Sample_Period + Species)
+
+#filtering low express genes 
+keep <- rowSums(counts(dds6)) >= 144
+dds6 <- dds6[keep,]
+```
+
+## dds7--> model design :  ~ Both_Resistance + Sample_Period + Species safter having collaps Sample period as replicates of each ID
+```{r}
+dds7<- collapseReplicates(dds5, dds5$ID, dds5$Sample_Period)
+colData(dds7)
+colnames(dds7)
+matchFirstLevel <- dds5$ID == levels(dds5$ID)[1]
+```
+
+```{r}
+stopifnot(all(rowSums(counts(dds5[,matchFirstLevel])) == counts(dds7[,1])))
+```
+
+
+#Analaysing gene DE
+
+```{r}
+dds1<- DESeq(dds1)
+
+dds2<- DESeq(dds2)
+
+dds3<- DESeq(dds3)
+
+dds4<- DESeq(dds4)
+
+dds5<- DESeq(dds5)
+
+dds6<- DESeq(dds6)
+
+dds7<- DESeq(dds7)
+```
+
+#PCA to visualised the clustering of the samples and dispersion 
+
+##Transform reads with variance Stabilizing Transformation
+```{r}
+vsd1 = vst(dds1, blind=FALSE)
+vsd2 = vst(dds2, blind=FALSE)
+vsd3 = vst(dds3, blind = FALSE)
+vsd4 = vst(dds4, blind = FALSE)
+vsd5 = vst(dds5, blind = FALSE)
+vsd6 = vst(dds6, blind = FALSE)
+vsd7 = vst(dds7, blind = FALSE)
+```
+
+##Plots to assess model fitting 
+#Plots for dds1 ~ Resistance_April2021 + Sample_Period
+```{r}
+pcaData1 = plotPCA(vsd1, intgroup=c("Species",'SP_Resistance',"Sample_ID"), 
+returnData=TRUE)
+percentVar1 = round(100 * attr(pcaData1, "percentVar"))
+
+png("results/06a_modeltesting/PCA_dds1_vst.png", width=7, height=7, units = "in", res = 300)
+ggplot(pcaData1, aes(PC1, PC2, colour = SP_Resistance, shape = Species)) + 
+geom_point(size = 2) + theme_bw() + 
+geom_text_repel(aes(label = Sample_ID), nudge_x = -1, nudge_y = 0.2, size = 3) +
+ggtitle("Principal Component Analysis dds1 vst", subtitle = "~ Resistance_April2021 + Sample_Period") +
+xlab(paste0("PC1: ",percentVar1[1],"% variance")) +
+ylab(paste0("PC2: ",percentVar1[2],"% variance"))
+dev.off()
+
+#Dispersion plot
+png("results/06a_modeltesting/qc-dispersions_dds1.png", 1000, 1000, pointsize=20)
+plotDispEsts(dds1, main="Dispersion plot ~ Resistance_April2021 + Sample_Period")
+dev.off()
+
+#Cook’s distance
+png("results/06a_modeltesting/cookdistance_dds1.png", width=15, height=10, units = "in", res = 300)
+boxplot_dds1<-boxplot(log10(assays(dds1)[["cooks"]]), range=0,  las=0,main="Cook's distance  ~ Resistance_April2021 + Sample_Period")
+dev.off()
+
+```
+
+#Plots for dds2 ~ Resistance2_April2021 + Sample_Period
+```{r}
+pcaData2 = plotPCA(vsd2, intgroup=c("Species",'SP_Resistance',"Sample_ID"), 
+returnData=TRUE)
+percentVar2 = round(100 * attr(pcaData2, "percentVar"))
+
+png("results/06a_modeltesting/PCA_dds2_vst.png", width=7, height=7, units = "in", res = 300)
+ggplot(pcaData2, aes(PC1, PC2, colour = SP_Resistance, shape = Species)) + 
+geom_point(size = 2) + theme_bw() + 
+geom_text_repel(aes(label = Sample_ID), nudge_x = -1, nudge_y = 0.2, size = 3) +
+ggtitle("Principal Component Analysis dds2 vst", subtitle = "~ Resistance2_April2021 + Sample_Period") +
+xlab(paste0("PC1: ",percentVar2[1],"% variance")) +
+ylab(paste0("PC2: ",percentVar2[2],"% variance"))
+dev.off()
+
+#Dispersion plot
+png("results/06a_modeltesting/qc-dispersions_dds2.png", 1000, 1000, pointsize=20)
+plotDispEsts(dds2, main="Dispersion plot ~ Resistance2_April2021 + Sample_Period")
+dev.off()
+
+#Cook’s distance
+png("results/06a_modeltesting/cookdistance_dds2.png",width=15, height=10, units = "in", res = 300)
+boxplot_dds2<-boxplot(log10(assays(dds2)[["cooks"]]), range=0, las=0, main="Cook's distance ~ Resistance2_April2021 + Sample_Period")
+dev.off()
+
+```
+
+#Plots for dds3 ~ Both_Resistance + Sample_Period
+```{r}
+pcaData3 = plotPCA(vsd3, intgroup=c("Species",'SP_Resistance',"Sample_ID"), 
+returnData=TRUE)
+percentVar3 = round(100 * attr(pcaData3, "percentVar"))
+
+png("results/06a_modeltesting/PCA_dds3_vst.png", width=7, height=7, units = "in", res = 300)
+ggplot(pcaData3, aes(PC1, PC2, colour = SP_Resistance, shape = Species)) + 
+geom_point(size = 2) + theme_bw() + 
+geom_text_repel(aes(label = Sample_ID), nudge_x = -1, nudge_y = 0.2, size = 3) +
+ggtitle("Principal Component Analysis dds3 vst", subtitle = "~ Both_Resistance + Sample_Period") +
+xlab(paste0("PC1: ",percentVar3[1],"% variance")) +
+ylab(paste0("PC2: ",percentVar3[2],"% variance"))
+dev.off()
+
+#Dispersion plot
+png("results/06a_modeltesting/qc-dispersions_dds3.png", 1000, 1000, pointsize=20)
+plotDispEsts(dds3, main="Dispersion plot ~ Both_Resistance + Sample_Period")
+dev.off()
+
+#Cook’s distance
+png("results/06a_modeltesting/cookdistance_dds3.png", width=15, height=10, units = "in", res = 300)
+boxplot_dds3<-boxplot(log10(assays(dds3)[["cooks"]]), range=0, las=0,  main="Cook's distance  ~ Both_Resistance + Sample_Period")
+dev.off()
+
+```
+
+#Plots for dds4 ~ dds3 collaps Sample_Period as replicates of each ID 
+```{r}
+pcaData4 = plotPCA(vsd4, intgroup=c("Species",'SP_Resistance',"Sample_ID"), 
+returnData=TRUE)
+percentVar4 = round(100 * attr(pcaData4, "percentVar"))
+
+png("results/06a_modeltesting/PCA_dds4_vst.png", width=7, height=7, units = "in", res = 300)
+ggplot(pcaData4, aes(PC1, PC2, colour = SP_Resistance, shape = Species)) + 
+geom_point(size = 2) + theme_bw() + 
+geom_text_repel(aes(label = Sample_ID), nudge_x = -1, nudge_y = 0.2, size = 3) +
+ggtitle("Principal Component Analysis dds4 vst", subtitle = " ~ dds3 collaps Sample_Period") +
+xlab(paste0("PC1: ",percentVar4[1],"% variance")) +
+ylab(paste0("PC2: ",percentVar4[2],"% variance"))
+dev.off()
+
+#Dispersion plot
+png("results/06a_modeltesting/qc-dispersions_dds4.png", 1000, 1000, pointsize=20)
+plotDispEsts(dds4, main="Dispersion plot  ~ dds3 collaps Sample_Period")
+dev.off()
+
+#Cook’s distance
+png("results/06a_modeltesting/cookdistance_dds4.png", width=15, height=10, units = "in", res = 300)
+boxplot_dds4<-boxplot(log10(assays(dds4)[["cooks"]]), range=0, las=0,  main="Cook's distance  ~ dds3 collaps Sample_Period")
+dev.off()
+
+```
+
+
+#Plots for dds5  ~ Both_Resistance + Sample_Period + Species
+```{r}
+pcaData5 = plotPCA(vsd5, intgroup=c("Species",'SP_Resistance',"Sample_ID"), 
+returnData=TRUE)
+percentVar5 = round(100 * attr(pcaData5, "percentVar"))
+
+png("results/06a_modeltesting/PCA_dds5_vst.png", width=7, height=7, units = "in", res = 300)
+ggplot(pcaData5, aes(PC1, PC2, colour = SP_Resistance, shape = Species)) + 
+geom_point(size = 2) + theme_bw() + 
+geom_text_repel(aes(label = Sample_ID), nudge_x = -1, nudge_y = 0.2, size = 3) +
+ggtitle("Principal Component Analysis dds5 vst", subtitle = "  ~ Both_Resistance + Sample_Period + Species") +
+xlab(paste0("PC1: ",percentVar5[1],"% variance")) +
+ylab(paste0("PC2: ",percentVar5[2],"% variance"))
+dev.off()
+
+#Dispersion plot
+png("results/06a_modeltesting/qc-dispersions_dds5.png", 1000, 1000, pointsize=20)
+plotDispEsts(dds5, main="Dispersion plot   ~ Both_Resistance + Sample_Period + Species")
+dev.off()
+
+#Cook’s distance
+png("results/06a_modeltesting/cookdistance_dds5.png", width=15, height=10, units = "in", res = 300)
+boxplot_dds5<-boxplot(log10(assays(dds5)[["cooks"]]), range=0, las=0,  main="Cook's distance  ~ Both_Resistance + Sample_Period + Species")
+dev.off()
+
+```
+
+#Plots for dds6  ~ Both_Resistance + Sample_Period + Species filtered
+```{r}
+pcaData6 = plotPCA(vsd6, intgroup=c("Species",'SP_Resistance',"Sample_ID"), 
+returnData=TRUE)
+percentVar6 = round(100 * attr(pcaData6, "percentVar"))
+
+png("results/06a_modeltesting/PCA_dds6_vst.png", width=7, height=7, units = "in", res = 300)
+ggplot(pcaData6, aes(PC1, PC2, colour = SP_Resistance, shape = Species)) + 
+geom_point(size = 2) + theme_bw() + 
+geom_text_repel(aes(label = Sample_ID), nudge_x = -1, nudge_y = 0.2, size = 3) +
+ggtitle("Principal Component Analysis dds6 vst", subtitle = "   ~ Both_Resistance + Sample_Period + Species filtered") +
+xlab(paste0("PC1: ",percentVar6[1],"% variance")) +
+ylab(paste0("PC2: ",percentVar6[2],"% variance"))
+dev.off()
+
+#Dispersion plot
+png("results/06a_modeltesting/qc-dispersions_dds6.png", 1000, 1000, pointsize=20)
+plotDispEsts(dds6, main="Dispersion plot    ~ Both_Resistance + Sample_Period + Species filtered")
+dev.off()
+
+#Cook’s distance
+png("results/06a_modeltesting/cookdistance_dds6.png", width=15, height=10, units = "in", res = 300)
+boxplot_dds6<-boxplot(log10(assays(dds6)[["cooks"]]), range=0, las=0,  main="Cook's distance   ~ Both_Resistance + Sample_Period + Species filtered")
+dev.off()
+
+```
+
+#Plots for dds7 ~ Both_Resistance + Sample_Period + Species collaps Sample_Period as replicates of each ID
+```{r}
+pcaData7 = plotPCA(vsd7, intgroup=c("Species",'SP_Resistance',"Sample_ID"), 
+returnData=TRUE)
+percentVar7 = round(100 * attr(pcaData7, "percentVar"))
+
+png("results/06a_modeltesting/PCA_dds7_vst.png", width=7, height=7, units = "in", res = 300)
+ggplot(pcaData7, aes(PC1, PC2, colour = SP_Resistance, shape = Species)) + 
+geom_point(size = 2) + theme_bw() + 
+geom_text_repel(aes(label = Sample_ID), nudge_x = -1, nudge_y = 0.2, size = 3) +
+ggtitle("Principal Component Analysis dds7 vst", subtitle = " ~ Both_Resistance + Sample_Period + Species collaps Sample_period") +
+xlab(paste0("PC1: ",percentVar7[1],"% variance")) +
+ylab(paste0("PC2: ",percentVar7[2],"% variance"))
+dev.off()
+
+#Dispersion plot
+png("results/06a_modeltesting/qc-dispersions_dds7.png", 1000, 1000, pointsize=20)
+plotDispEsts(dds7, main="Dispersion plot  Both_Resistance + Sample_Period + Species collaps Sample_period")
+dev.off()
+
+#Cook’s distance
+png("results/06a_modeltesting/cookdistance_dds7.png", width=15, height=10, units = "in", res = 300)
+boxplot_dds7<-boxplot(log10(assays(dds7)[["cooks"]]), range=0, las=0,  main="Cook's distance  Both_Resistance + Sample_Period + Species collaps Sample_period")
+dev.off()
+
+
+```
+
+#Checking summary results for each model to see if there is any concerns about outliers
+```{r}
+res1<- results(dds1)
+summary(res1)
+res2<- results(dds2)
+summary(res2)
+res3<- results(dds3)
+summary(res3)
+res4<- results(dds4)
+summary(res4)
+res5<- results(dds5)
+summary(res5)
+res6<- results(dds6)
+summary(res6)
+res7<- results(dds7)
+summary(res7)
+```
+
+#dds7 seems to be the best model even if there are some outiliers based on the cook's distance it seems driven by 2 samples
+
+###Finding outliers
+
+#transform data with rlogTransformation
+```{r}
+rld7 <- rlogTransformation(dds7)
+```
+
+
+```{r}
+pcaData7r = plotPCA(rld7, intgroup=c("Species",'Both_Resistance',"Sample_ID"), 
+returnData=TRUE)
+percentVar7r = round(100 * attr(pcaData7r, "percentVar"))
+
+png("results/06a_modeltesting/PCA_dds7_rld.png", width=7, height=7, units = "in", res = 300)
+ggplot(pcaData7r, aes(PC1, PC2, colour = Both_Resistance, shape = Species)) + 
+geom_point(size = 2) + theme_bw() + 
+geom_text_repel(aes(label = Sample_ID), nudge_x = -1, nudge_y = 0.2, size = 3) +
+ggtitle("Principal Component Analysis dds7 rld", subtitle = " ~ Both_Resistance + Sample_Period + Species collaps Sample_period") +
+xlab(paste0("PC1: ",percentVar7r[1],"% variance")) +
+ylab(paste0("PC2: ",percentVar7r[2],"% variance"))
+dev.off()
+
+```
+
+#Outliers identify with PCA 208_N56 and 172_LC053
+
+###Exctracting outliers
+```{r}
+countData_edit<- countData_4M %>% select(-'208_N56', -"272_N56", -"63_N56", -'172_LC053', -"342_LC053") 
+
+sample_data_edit<- sample_data_4M %>% filter(!grepl( '*_N56|*_LC053', colnames))
+ 
+colnames(countData_edit) == rownames(sample_data_edit)
+```
+
+###Reruning dds7 without outliers
+```{r}
+dds5e = DESeqDataSetFromMatrix(countData = countData_edit, 
+                            
+                                colData = sample_data_edit, 
+ 
+                                design = ~ Both_Resistance + Sample_Period + Species)
+
+dds7e<- collapseReplicates(dds5e, dds5e$ID, dds5e$Sample_Period)
+colData(dds7e)
+colnames(dds7e)
+matchFirstLevel <- dds5e$ID == levels(dds5e$ID)[1]
+```
+
+```{r}
+stopifnot(all(rowSums(counts(dds5e[,matchFirstLevel])) == counts(dds7e[,1])))
+```
+
+#Analysising DEG
+```{r}
+dds7e<- DESeq(dds7e)
+```
+
+```{r}
+vsd7e = vst(dds7e, blind = FALSE)
+```
+
+
+#Ploting dds7e ~ Both_Resistance + Sample_Period + Species collaps Sample_Period as replicates of each ID WITHOUt outliers
+```{r}
+pcaData7e = plotPCA(vsd7e, intgroup=c("Species",'SP_Resistance',"Sample_ID"), 
+returnData=TRUE)
+percentVar7e = round(100 * attr(pcaData7e, "percentVar"))
+
+png("results/06a_modeltesting/PCA_dds7e_vst.png", width=7, height=7, units = "in", res = 300)
+ggplot(pcaData7e, aes(PC1, PC2, colour = SP_Resistance, shape = Species)) + 
+geom_point(size = 2) + theme_bw() + 
+geom_text_repel(aes(label = Sample_ID), nudge_x = -1, nudge_y = 0.2, size = 3) +
+ggtitle("Principal Component Analysis dds7e vst", subtitle = " ~ Both_Resistance + Sample_Period + Species collaps Sample_period NO OUTLIERS") +
+xlab(paste0("PC1: ",percentVar7e[1],"% variance")) +
+ylab(paste0("PC2: ",percentVar7e[2],"% variance"))
+dev.off()
+
+#Dispersion plot
+png("results/06a_modeltesting/qc-dispersions_dds7e.png", 1000, 1000, pointsize=20)
+plotDispEsts(dds7e, main="Dispersion plot  Both_Resistance + Sample_Period + Species collaps Sample_period NO OUTLIERS")
+dev.off()
+
+#Cook’s distance
+png("results/06a_modeltesting/cookdistance_dds7e.png", width=15, height=10, units = "in", res = 300)
+boxplot_dds7e<-boxplot(log10(assays(dds7e)[["cooks"]]), range=0, las=0,  main="Cook's distance  Both_Resistance + Sample_Period + Species collaps Sample_period NO OUTLIERS")
+dev.off()
+```
+
+#transform data with rlogTransformation
+```{r}
+rld7e <- rlogTransformation(dds7e)
+```
+
+
+```{r}
+pcaData7er = plotPCA(rld7e, intgroup=c("Species",'Both_Resistance',"Sample_ID"), 
+returnData=TRUE)
+percentVar7er = round(100 * attr(pcaData7er, "percentVar"))
+
+png("results/06a_modeltesting/PCA_dds7e_rld.png", width=7, height=7, units = "in", res = 300)
+ggplot(pcaData7er, aes(PC1, PC2, colour = Both_Resistance, shape = Species)) + 
+geom_point(size = 2) + theme_bw() + 
+geom_text_repel(aes(label = Sample_ID), nudge_x = -1, nudge_y = 0.2, size = 3) +
+ggtitle("Principal Component Analysis dds7 rld", subtitle = " ~ Both_Resistance + Sample_Period + Species collaps Sample_period") +
+xlab(paste0("PC1: ",percentVar7er[1],"% variance")) +
+ylab(paste0("PC2: ",percentVar7er[2],"% variance"))
+dev.off()
+
+```
+
+```{r}
+res7e<- results(dds7e)
+summary(res7e)
+```
+

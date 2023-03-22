@@ -72,8 +72,11 @@ samples_selected_4M<- sample_metadata_reads %>%
   
 samples_selected_4M$Sample_Period<- as.character(samples_selected_4M$Sample_Period)
 samples_selected_4M$RNA_Dilution_concentration<- as.character(samples_selected_4M$RNA_Dilution_concentration)
+  
 
 n_colonies_4M<- unique(samples_selected_4M$ID) #79
+
+#write.csv(samples_selected_4M, "data/samples_selected_4M.csv")
 ```
 
 #Creating variables based on colony ID and sample period 
@@ -171,6 +174,8 @@ sp2_sp3<- sample_period_data %>%                             #104 samples / 52 u
           filter(Sample_Period != '1')
 
 n_colonies_sp2_3<- unique(sp2_sp3$ID)
+
+#write.csv(sp2_sp3, "data/sp2_sp3.csv")
 ```
 
 #List will be use to select files for the countData_4M and countData_sp2_3
@@ -183,7 +188,7 @@ for_list_samples_4M<- samples_selected_4M  %>% select(Sample_ID)
 
 for_list_sp2_sp3<- sp2_sp3 %>% select(Sample_ID)
 
-write_delim(for_list_sp2_sp3, 'hpc/data/sample_list_sp2_3.txt')
+#write_delim(for_list_sp2_sp3, 'hpc/data/sample_list_sp2_3.txt')
 
 ```
 
@@ -215,6 +220,8 @@ colnames(countData_4M) = gsub("_trimmed.fq.gzReadsPerGene.out.tab", "", colnames
 rownames(countData_4M) = countData_4M$GeneID
 
 countData_4M = countData_4M[,c(2:ncol(countData_4M))]
+
+#write_rds(countData_4M, "data/countData_4M.rds")
 ```
 
 #Creating a list of all files of samples from the same colonies at samples period 2 and 3
@@ -239,6 +246,9 @@ colnames(countData_sp2_3) = gsub("_trimmed.fq.gzReadsPerGene.out.tab", "", colna
 rownames(countData_sp2_3) = countData_sp2_3$GeneID
 
 countData_sp2_3 = countData_sp2_3[,c(2:ncol(countData_sp2_3))]
+
+#write_rds(countData_sp2_3, "data/countData_sp2_3.rds")
+
 ```
 
 
@@ -254,9 +264,15 @@ ggplot(samples_selected_4M, aes(Cq)) + geom_histogram()
 
 ```{r}
 ggplot(samples_selected_4M, aes(Resistance2_April2021)) + geom_bar() + facet_grid(  ~ Sample_Period)
+```
 
+
+```{r}
 ggplot(samples_selected_4M, aes(Sample_Period)) + geom_bar(aes(fill=Sample_Period), position = "dodge") + facet_wrap(~ ID )
+```
 
+
+```{r}
 ggplot(samples_selected_4M, aes(Resistance2_April2021)) + geom_bar(aes(fill=Sample_Period), position = "dodge") + facet_wrap(~ ID )
 
 forplot<- samples_selected_4M %>% group_by(Sample_Period, Resistance2_April2021)
