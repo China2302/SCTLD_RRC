@@ -177,6 +177,10 @@ resOrd_dds7e_1<- as.data.frame(res_dds7e_1[order(res_dds7e_1$padj),])
 resOrd_dds7e_1<- resOrd_dds7e_1 %>%  
   
                  mutate(ofav_gene = rownames(resOrd_dds7e_1)) %>%
+  
+                 mutate(contrast = 1) %>% 
+                 
+                 mutate(contrast_gene = paste(contrast, ofav_gene, sep = "_")) %>% 
    
                  filter(padj<0.1)
 ```
@@ -192,6 +196,10 @@ resOrd_dds7e_2<- as.data.frame(res_dds7e_2[order(res_dds7e_2$padj),])
 resOrd_dds7e_2<- resOrd_dds7e_2 %>%  
   
                  mutate(ofav_gene = rownames(resOrd_dds7e_2)) %>%
+  
+                 mutate(contrast = 2) %>% 
+                 
+                 mutate(contrast_gene = paste(contrast, ofav_gene, sep = "_")) %>% 
    
                  filter(padj<0.1)
 ```
@@ -207,6 +215,10 @@ resOrd_dds7e_3<- as.data.frame(res_dds7e_3[order(res_dds7e_3$padj),])
 resOrd_dds7e_3<- resOrd_dds7e_3 %>%  
   
                  mutate(ofav_gene = rownames(resOrd_dds7e_3)) %>%
+ 
+                 mutate(contrast = 3) %>% 
+                 
+                 mutate(contrast_gene = paste(contrast, ofav_gene, sep = "_")) %>% 
    
                  filter(padj<0.1)
 ```
@@ -222,6 +234,10 @@ resOrd_dds7e_4<- as.data.frame(res_dds7e_4[order(res_dds7e_4$padj),])
 resOrd_dds7e_4<- resOrd_dds7e_4 %>%  
   
                  mutate(ofav_gene = rownames(resOrd_dds7e_4)) %>%
+  
+                 mutate(contrast = 4) %>% 
+                 
+                 mutate(contrast_gene = paste(contrast, ofav_gene, sep = "_")) %>% 
    
                  filter(padj<0.1)
 ```
@@ -236,11 +252,15 @@ resOrd_dds7e_5<- as.data.frame(res_dds7e_5[order(res_dds7e_5$padj),])
 resOrd_dds7e_5<- resOrd_dds7e_5 %>%  
   
                  mutate(ofav_gene = rownames(resOrd_dds7e_5)) %>%
+  
+                 mutate(contrast = 5) %>% 
+                 
+                 mutate(contrast_gene = paste(contrast, ofav_gene, sep = "_")) %>% 
    
                  filter(padj<0.1)
 ```
 
-###5: result we will compare "SCTLD_affected_High" vs "SCTLD_unaffected_High"
+###6: result we will compare "SCTLD_affected_High" vs "SCTLD_unaffected_High"
 ```{r}
 res_dds7e_6<- results(dds7e,contrast =
                                         
@@ -251,6 +271,39 @@ resOrd_dds7e_6<- as.data.frame(res_dds7e_5[order(res_dds7e_6$padj),])
 resOrd_dds7e_6<- resOrd_dds7e_6 %>%  
   
                  mutate(ofav_gene = rownames(resOrd_dds7e_6)) %>%
+  
+                 mutate(contrast = 6) %>% 
+                 
+                 mutate(contrast_gene = paste(contrast, ofav_gene, sep = "_")) %>% 
    
                  filter(padj<0.1)
 ```
+###Merging all the list and adding annotations
+```{r}
+#Getting gene descriptions found with g:profiler
+
+gene_anno<- read.csv("data/DEG_gprofiler.csv") %>% 
+
+            mutate(contrast_gene = paste(contrast, ofav_gene, sep = "_")) %>% 
+  
+            select(-contrast, -ofav_gene)
+#Binding results for all contrast
+
+resOrd_dds7e_all<- rbind(resOrd_dds7e_1,resOrd_dds7e_2) %>% 
+  
+                   rbind(resOrd_dds7e_3,resOrd_dds7e_4) %>% 
+  
+                   rbind(resOrd_dds7e_5,resOrd_dds7e_6)
+
+#Merging expression with annotations
+
+DEG_all_dds7e<- resOrd_dds7e_all %>% full_join(gene_anno, by="contrast_gene")
+
+write.csv(DEG_all_dds7e, "data/DEG_all_anno.csv")
+```
+
+
+```{r}
+
+```
+
