@@ -500,3 +500,7 @@ res7e<- results(dds7e)
 summary(res7e)
 ```
 
+```{r}
+sessionInfo()
+```
+

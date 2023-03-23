@@ -52,14 +52,17 @@ sample_data_4M<- samples_selected_4M %>%
   
               arrange(order)
   
-              #select(Sample_ID,ID, Species, Sample_Period, Resistance2_April2021, Resistance_April2021,
-                   # Location,treat_type, Region, RNA_Dilution_concentration, Sample_name, Cq) 
+            
 sample_data_4M$ID<- as.factor(sample_data_4M$ID)  
 row.names(sample_data_4M)<- sample_data_4M$Sample_ID
 sample_data_4M$Sample_Period<- as.factor(sample_data_4M$Sample_Period)  
 
-colnames(countData_4M) == rownames(sample_data_4M)
+keep <-countData_4M %>% mutate(keep = rowSums(countData_4M) >= 130)
 
+countData_4M<- keep %>% filter(keep == TRUE) %>% select(-keep)
+
+
+colnames(countData_4M) == rownames(sample_data_4M)
 
 ```
 base on the model selection done in 6a_gene_expression_analysis.Rmd here we proceed to prepare the data to run that model
@@ -67,6 +70,10 @@ base on the model selection done in 6a_gene_expression_analysis.Rmd here we proc
 ###Eliminating outliers
 ```{r}
 countData_edit<- countData_4M %>% select(-'208_N56', -"272_N56", -"63_N56", -'172_LC053', -"342_LC053") 
+
+keep <-countData_edit %>% mutate(keep = rowSums(countData_edit) >= 130)
+
+countData_edit<- keep %>% filter(keep == TRUE) %>% select(-keep)
 
 sample_data_edit<- sample_data_4M %>% filter(!grepl( '*_N56|*_LC053', colnames))
  
@@ -96,7 +103,7 @@ stopifnot(all(rowSums(counts(dds5e[,matchFirstLevel])) == counts(dds7e[,1])))
 if (file.exists("cache/dds7e.rds")) {
   dds7e<- read_rds("cache/dds7e.rds")
 } else {
-  dds7e<- DESeq(dds7e, parallel = TRUE)
+  dds7e<- DESeq(dds7e)
   write_rds(dds7e,"cache/dds7e.rds")
 }
 ```
@@ -112,24 +119,24 @@ pcaData7e = plotPCA(vsd7e, intgroup=c("Species",'SP_Resistance',"Sample_ID"),
 returnData=TRUE)
 percentVar7e = round(100 * attr(pcaData7e, "percentVar"))
 
-png("results/06a_modeltesting/PCA_dds7e_vst.png", width=7, height=7, units = "in", res = 300)
+#png("results/06a_modeltesting/PCA_dds7e_vst.png", width=7, height=7, units = "in", res = 300)
 ggplot(pcaData7e, aes(PC1, PC2, colour = SP_Resistance, shape = Species)) + 
 geom_point(size = 2) + theme_bw() + 
 geom_text_repel(aes(label = Sample_ID), nudge_x = -1, nudge_y = 0.2, size = 3) +
 ggtitle("Principal Component Analysis dds7e vst", subtitle = " ~ Both_Resistance + Sample_Period + Species collaps Sample_period NO OUTLIERS") +
 xlab(paste0("PC1: ",percentVar7e[1],"% variance")) +
 ylab(paste0("PC2: ",percentVar7e[2],"% variance"))
-dev.off()
+#dev.off()
 
 #Dispersion plot
-png("results/06a_modeltesting/qc-dispersions_dds7e.png", 1000, 1000, pointsize=20)
+#png("results/06a_modeltesting/qc-dispersions_dds7e.png", 1000, 1000, pointsize=20)
 plotDispEsts(dds7e, main="Dispersion plot  Both_Resistance + Sample_Period + Species collaps Sample_period NO OUTLIERS")
-dev.off()
+#dev.off()
 
 #Cook’s distance
-png("results/06a_modeltesting/cookdistance_dds7e.png", width=15, height=10, units = "in", res = 300)
+#png("results/06a_modeltesting/cookdistance_dds7e.png", width=15, height=10, units = "in", res = 300)
 boxplot_dds7e<-boxplot(log10(assays(dds7e)[["cooks"]]), range=0, las=0,  main="Cook's distance  Both_Resistance + Sample_Period + Species collaps Sample_period NO OUTLIERS")
-dev.off()
+#dev.off()
 ```
 
 #transform data with rlogTransformation
@@ -163,9 +170,9 @@ dev.off()
 resultsNames(dds7e)
 res_dds7e<- results(dds7e)
 summary(res_dds7e)
-attr(dds7e, "modelMatrix")
+#attr(dds7e, "modelMatrix")
 ```
-We will use contrast to compare our different groups of suceptibility 
+We will use contrast to compare our different groups of susceptibility 
 ###1: result we will compare "SCTLD_affected_Low" vs "SCTLD_unaffected_High"
 ```{r}
 res_dds7e_1<- results(dds7e,contrast =

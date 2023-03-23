@@ -4,7 +4,6 @@ LOC110040875,110040875,protamine-like,1,SCTLD_affected_Low_vs_SCTLD_unaffected_H
 LOC110042938,110042938,uncharacterized LOC110042938,1,SCTLD_affected_Low_vs_SCTLD_unaffected_High,1,0,0,0,0,0
 LOC110064450,110064450,RING finger protein 151-like,1,SCTLD_affected_Low_vs_SCTLD_unaffected_High,1,0,0,0,0,0
 LOC110041483,110041483,zinc finger protein 208-like,1,SCTLD_affected_Low_vs_SCTLD_unaffected_High,1,0,0,0,0,0
-LOC110067385,110067385,melanocyte-stimulating hormone receptor-like,1,SCTLD_affected_Low_vs_SCTLD_unaffected_High,1,0,0,0,0,0
 LOC110069266,110069266,EF-hand calcium-binding domain-containing protein 9-like,1,SCTLD_affected_Low_vs_SCTLD_unaffected_High,1,0,0,0,0,0
 LOC110058869,110058869,uncharacterized LOC110058869,1,SCTLD_affected_Low_vs_SCTLD_unaffected_High,1,0,0,0,0,0
 LOC110058530,110058530,interferon alpha-inducible protein 27-like protein 2A,1,SCTLD_affected_Low_vs_SCTLD_unaffected_High,1,0,0,0,0,0
@@ -40,14 +39,12 @@ LOC110058814,110058814,uncharacterized LOC110058814,2,SCTLD_affected_Low_vs_SCTL
 LOC110060341,110060341,"uncharacterized LOC110060341, transcript variant X1",2,SCTLD_affected_Low_vs_SCTLD_affected_High,0,1,0,0,0,0
 LOC110065163,110065163,40S ribosomal protein SA-like,2,SCTLD_affected_Low_vs_SCTLD_affected_High,0,1,0,0,0,0
 LOC110065742,110065742,cullin-3-like,2,SCTLD_affected_Low_vs_SCTLD_affected_High,0,1,0,0,0,0
-LOC110067385,110067385,melanocyte-stimulating hormone receptor-like,2,SCTLD_affected_Low_vs_SCTLD_affected_High,0,1,0,0,0,0
 LOC110067805,110067805,basic leucine zipper and W2 domain-containing protein 2-like,2,SCTLD_affected_Low_vs_SCTLD_affected_High,0,1,0,0,0,0
 LOC110040879,110040879,protamine-like,3,SCTLD_affected_Low_vs_SCTLD_affected_Some,0,0,1,0,0,0
 LOC110044475,110044475,"U1 small nuclear ribonucleoprotein 70 kDa-like, transcript variant X2",3,SCTLD_affected_Low_vs_SCTLD_affected_Some,0,0,1,0,0,0
 LOC110047047,110047047,protein kinase C-binding protein 1-like,3,SCTLD_affected_Low_vs_SCTLD_affected_Some,0,0,1,0,0,0
 LOC110051347,110051347,putative uncharacterized protein DDB_G0292330,3,SCTLD_affected_Low_vs_SCTLD_affected_Some,0,0,1,0,0,0
 LOC110053470,110053470,uncharacterized LOC110053470,3,SCTLD_affected_Low_vs_SCTLD_affected_Some,0,0,1,0,0,0
-LOC110067385,110067385,melanocyte-stimulating hormone receptor-like,3,SCTLD_affected_Low_vs_SCTLD_affected_Some,0,0,1,0,0,0
 LOC110040875,110040875,protamine-like,4,SCTLD_affected_Some_vs_SCTLD_unaffected_High,0,0,0,1,0,0
 LOC110041483,110041483,zinc finger protein 208-like,4,SCTLD_affected_Some_vs_SCTLD_unaffected_High,0,0,0,1,0,0
 LOC110041989,110041989,uncharacterized LOC110041989,4,SCTLD_affected_Some_vs_SCTLD_unaffected_High,0,0,0,1,0,0
@@ -92,3 +89,5 @@ LOC110057625,110057625,"uncharacterized LOC110057625, transcript variant X1",6,S
 LOC110058532,110058532,interferon alpha-inducible protein 27-like protein 2A,6,SCTLD_affected_HIgh_vs_SCTLD_unaffected_High,0,0,0,0,0,1
 LOC110060341,110060341,"uncharacterized LOC110060341, transcript variant X1",6,SCTLD_affected_HIgh_vs_SCTLD_unaffected_High,0,0,0,0,0,1
 LOC110065742,110065742,cullin-3-like,6,SCTLD_affected_HIgh_vs_SCTLD_unaffected_High,0,0,0,0,0,1
+LOC110043060,LOC110043060,uncharacterized LOC110043060,6,SCTLD_affected_HIgh_vs_SCTLD_unaffected_High,0,0,0,0,0,1
+LOC110043060,LOC110043060,uncharacterized LOC110043060,5,SCTLD_affected_Some_vs_SCTLD_affected_High,0,0,0,0,1,0
